@@ -1,0 +1,16 @@
+{
+	"name": "DS_Sample_AdventureWorks_ALL",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQLDB_ADF_Sample_AdventureWorks",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "SQL Database/Generic_Datasets"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,94 @@
+{
+	"name": "Load_DimProduct",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_Product",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTProduct"
+				},
+				{
+					"dataset": {
+						"referenceName": "DW_DimProduct",
+						"type": "DatasetReference"
+					},
+					"name": "DimProduct"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_ProductCategory",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTProductCategory"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_ProductModel",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTProductModel"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_ProductModelProductDescription",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTModelDescription"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_ProductDescription",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTProductDescription"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DW_DimProduct",
+						"type": "DatasetReference"
+					},
+					"name": "SinkDimProduct"
+				}
+			],
+			"transformations": [
+				{
+					"name": "CreateHash"
+				},
+				{
+					"name": "Exists"
+				},
+				{
+					"name": "ProductLookup"
+				},
+				{
+					"name": "SetAttributes"
+				},
+				{
+					"name": "AlterRows"
+				},
+				{
+					"name": "JoinProductCategory"
+				},
+				{
+					"name": "JoinProductModel"
+				},
+				{
+					"name": "JoinModelDescription"
+				},
+				{
+					"name": "JoinProductDescription"
+				},
+				{
+					"name": "ColumnSelection"
+				}
+			],
+			"script": "source(output(\n\t\tProductID as integer,\n\t\tName as string,\n\t\tProductNumber as string,\n\t\tColor as string,\n\t\tStandardCost as decimal(19,4),\n\t\tListPrice as decimal(19,4),\n\t\tSize as string,\n\t\tWeight as decimal(8,2),\n\t\tProductCategoryID as integer,\n\t\tProductModelID as integer,\n\t\tSellStartDate as timestamp,\n\t\tSellEndDate as timestamp,\n\t\tDiscontinuedDate as timestamp,\n\t\tThumbNailPhoto as binary,\n\t\tThumbnailPhotoFileName as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> SalesLTProduct\nsource(output(\n\t\tProductId as integer,\n\t\tProductCategoryName as string,\n\t\tProductModelName as string,\n\t\tProductModelDescription as string,\n\t\tProductName as string,\n\t\tProductNumber as integer,\n\t\tColor as string,\n\t\tStandardCost as decimal(19,4),\n\t\tListPrice as decimal(19,4),\n\t\tSize as string,\n\t\tWeight as double,\n\t\tInsertedDate as timestamp,\n\t\tUpdatedDate as timestamp,\n\t\tHashKey as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> DimProduct\nsource(output(\n\t\tProductCategoryID as integer,\n\t\tParentProductCategoryID as integer,\n\t\tName as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> SalesLTProductCategory\nsource(output(\n\t\tProductModelID as integer,\n\t\tName as string,\n\t\tCatalogDescription as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> SalesLTProductModel\nsource(output(\n\t\tProductModelID as integer,\n\t\tProductDescriptionID as integer,\n\t\tCulture as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tquery: 'select * from SalesLT.ProductModelProductDescription where culture = \\'en\\'',\n\tformat: 'query') ~> SalesLTModelDescription\nsource(output(\n\t\tProductDescriptionID as integer,\n\t\tDescription as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> SalesLTProductDescription\nJoinProductDescription derive(HashKey = sha1(toString(ProductID) +  SalesLTProductCategory@Name +  SalesLTProductModel@Name +  Description +  SalesLTProduct@Name +  ProductNumber +  Color +  toString(StandardCost) +  toString(ListPrice) +  Size +  toString(Weight))) ~> CreateHash\nCreateHash, DimProduct exists(CreateHash@HashKey == DimProduct@HashKey,\n\tnegate:true,\n\tbroadcast: 'auto')~> Exists\nExists, DimProduct lookup(SalesLTProduct@ProductID == DimProduct@ProductId,\n\tmultiple: false,\n\tpickup: 'any',\n\tbroadcast: 'auto')~> ProductLookup\nColumnSelection derive(InsertedDate = iif(isNull(InsertedDate), currentTimestamp(), InsertedDate),\n\t\tUpdatedDate = currentTimestamp()) ~> SetAttributes\nSetAttributes alterRow(upsertIf(true())) ~> AlterRows\nSalesLTProduct, SalesLTProductCategory join(SalesLTProduct@ProductCategoryID == SalesLTProductCategory@ProductCategoryID,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinProductCategory\nJoinProductCategory, SalesLTProductModel join(SalesLTProduct@ProductModelID == SalesLTProductModel@ProductModelID,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinProductModel\nJoinProductModel, SalesLTModelDescription join(SalesLTProduct@ProductModelID == SalesLTModelDescription@ProductModelID,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinModelDescription\nJoinModelDescription, SalesLTProductDescription join(SalesLTModelDescription@ProductDescriptionID == SalesLTProductDescription@ProductDescriptionID,\n\tjoinType:'inner',\n\tbroadcast: 'auto')~> JoinProductDescription\nProductLookup select(mapColumn(\n\t\tProductID = SalesLTProduct@ProductID,\n\t\tProductName = SalesLTProduct@Name,\n\t\tProductNumber = SalesLTProduct@ProductNumber,\n\t\tColor = SalesLTProduct@Color,\n\t\tStandardCost = SalesLTProduct@StandardCost,\n\t\tListPrice = SalesLTProduct@ListPrice,\n\t\tSize = SalesLTProduct@Size,\n\t\tWeight = SalesLTProduct@Weight,\n\t\tProductCategoryName = SalesLTProductCategory@Name,\n\t\tProductModelName = SalesLTProductModel@Name,\n\t\tProductModelDescription = Description,\n\t\tInputHashKey = CreateHash@HashKey,\n\t\tProductId = DimProduct@ProductId,\n\t\tInsertedDate,\n\t\tUpdatedDate\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> ColumnSelection\nAlterRows sink(input(\n\t\tProductId as integer,\n\t\tProductCategoryName as string,\n\t\tProductModelName as string,\n\t\tProductModelDescription as string,\n\t\tProductName as string,\n\t\tProductNumber as integer,\n\t\tColor as string,\n\t\tStandardCost as decimal(19,4),\n\t\tListPrice as decimal(19,4),\n\t\tSize as string,\n\t\tWeight as double,\n\t\tInsertedDate as timestamp,\n\t\tUpdatedDate as timestamp,\n\t\tHashKey as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:false,\n\tupdateable:false,\n\tupsertable:true,\n\tkeys:['ProductId'],\n\tformat: 'table',\n\tmapColumn(\n\t\tProductId = ColumnSelection@ProductID,\n\t\tProductCategoryName,\n\t\tProductModelName,\n\t\tProductModelDescription,\n\t\tProductName,\n\t\tProductNumber,\n\t\tColor,\n\t\tStandardCost,\n\t\tListPrice,\n\t\tSize,\n\t\tWeight,\n\t\tInsertedDate,\n\t\tUpdatedDate,\n\t\tHashKey = InputHashKey\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> SinkDimProduct"
+		}
+	}
+}

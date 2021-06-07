@@ -1,0 +1,30 @@
+{
+	"name": "DL_AdventureWorks",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_ADLG2_ADF",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Azure Data Lake"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@{item().table_schema}/@{item().table_name}",
+					"type": "Expression"
+				},
+				"fileSystem": "dlstorefs/AdventureWorks"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,51 @@
+{
+	"name": "Load_DimCustomer",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_SalesLT_Customer",
+						"type": "DatasetReference"
+					},
+					"name": "SalesLTCustomer"
+				},
+				{
+					"dataset": {
+						"referenceName": "DW_DimCustomer",
+						"type": "DatasetReference"
+					},
+					"name": "DimCustomer"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DW_DimCustomer",
+						"type": "DatasetReference"
+					},
+					"name": "SinkDimCustomer"
+				}
+			],
+			"transformations": [
+				{
+					"name": "CreateHash"
+				},
+				{
+					"name": "Exists"
+				},
+				{
+					"name": "CustomerLookup"
+				},
+				{
+					"name": "SetAttributes"
+				},
+				{
+					"name": "AlterRows"
+				}
+			],
+			"script": "source(output(\n\t\tCustomerID as integer,\n\t\tNameStyle as boolean,\n\t\tTitle as string,\n\t\tFirstName as string,\n\t\tMiddleName as string,\n\t\tLastName as string,\n\t\tSuffix as string,\n\t\tCompanyName as string,\n\t\tSalesPerson as string,\n\t\tEmailAddress as string,\n\t\tPhone as string,\n\t\tPasswordHash as string,\n\t\tPasswordSalt as string,\n\t\trowguid as string,\n\t\tModifiedDate as timestamp\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> SalesLTCustomer\nsource(output(\n\t\tCustomerId as integer,\n\t\tTitle as string,\n\t\tFirstName as string,\n\t\tMiddleName as string,\n\t\tLastName as string,\n\t\tSuffix as string,\n\t\tCompanyName as string,\n\t\tSalesPerson as string,\n\t\tEmailAddress as string,\n\t\tInsertedDate as timestamp,\n\t\tUpdatedDate as timestamp,\n\t\tHashKey as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> DimCustomer\nSalesLTCustomer derive(HashKey = sha1(Title + FirstName + MiddleName + LastName + Suffix + CompanyName +\tSalesPerson + EmailAddress)) ~> CreateHash\nCreateHash, DimCustomer exists(CreateHash@HashKey == DimCustomer@HashKey,\n\tnegate:true,\n\tbroadcast: 'auto')~> Exists\nExists, DimCustomer lookup(SalesLTCustomer@CustomerID == DimCustomer@CustomerId,\n\tmultiple: false,\n\tpickup: 'any',\n\tbroadcast: 'auto')~> CustomerLookup\nCustomerLookup derive(InsertedDate = iif(isNull(InsertedDate), currentTimestamp(), InsertedDate),\n\t\tUpdatedDate = currentTimestamp()) ~> SetAttributes\nSetAttributes alterRow(upsertIf(true())) ~> AlterRows\nAlterRows sink(input(\n\t\tCustomerId as integer,\n\t\tTitle as string,\n\t\tFirstName as string,\n\t\tMiddleName as string,\n\t\tLastName as string,\n\t\tSuffix as string,\n\t\tCompanyName as string,\n\t\tSalesPerson as string,\n\t\tEmailAddress as string,\n\t\tInsertedDate as timestamp,\n\t\tUpdatedDate as timestamp,\n\t\tHashKey as string\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tdeletable:false,\n\tinsertable:false,\n\tupdateable:false,\n\tupsertable:true,\n\tkeys:['CustomerId'],\n\tformat: 'table',\n\tmapColumn(\n\t\tCustomerId = SalesLTCustomer@CustomerID,\n\t\tTitle = SalesLTCustomer@Title,\n\t\tFirstName = SalesLTCustomer@FirstName,\n\t\tMiddleName = SalesLTCustomer@MiddleName,\n\t\tLastName = SalesLTCustomer@LastName,\n\t\tSuffix = SalesLTCustomer@Suffix,\n\t\tCompanyName = SalesLTCustomer@CompanyName,\n\t\tSalesPerson = SalesLTCustomer@SalesPerson,\n\t\tEmailAddress = SalesLTCustomer@EmailAddress,\n\t\tInsertedDate,\n\t\tUpdatedDate,\n\t\tHashKey = CreateHash@HashKey\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\terrorHandlingOption: 'stopOnFirstError') ~> SinkDimCustomer"
+		}
+	}
+}

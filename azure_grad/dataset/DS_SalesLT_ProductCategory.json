@@ -1,0 +1,45 @@
+{
+	"name": "DS_SalesLT_ProductCategory",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQLDB_ADF_Sample_AdventureWorks",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "SQL Database/Sample_AdventureWorks"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "ProductCategoryID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "ParentProductCategoryID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Name",
+				"type": "nvarchar"
+			},
+			{
+				"name": "rowguid",
+				"type": "uniqueidentifier"
+			},
+			{
+				"name": "ModifiedDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "SalesLT",
+			"table": "ProductCategory"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}
